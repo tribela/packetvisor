@@ -14,8 +14,10 @@ nics:
     rx_offloads:
       - vlan_strip
       - vlan_filter
+      - qinq_strip
       - ipv4_cksum
     tx_offloads:
       - vlan_insert
+      - qinq_insert
       - ipv4_cksum
 

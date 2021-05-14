@@ -94,7 +94,7 @@ bool inline pv_nic_is_tx_offload_enabled(const struct pv_nic* nic, uint32_t feat
 
 /**
  * Check tx offload is supported by hardware.
- * 
+ *
  * @return
  *   true if supported by hardware
  */
@@ -120,6 +120,10 @@ bool inline pv_nic_is_rx_offload_enabled(const struct pv_nic* nic, uint32_t feat
  */
 bool inline pv_nic_is_rx_offload_supported(const struct pv_nic* nic, uint32_t feature) {
     return nic->rx_offload_capa & feature;
+}
+
+bool inline pv_nic_is_not_usable(const struct pv_nic* nic, uint32_t feature) {
+    return pv_nic_is_rx_offload_enabled(nic, feature) && !pv_nic_is_rx_offload_supported(nic, feature);
 }
 
 #endif /* __PV_NIC_H__ */

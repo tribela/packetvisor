@@ -19,6 +19,8 @@ void rx_offload_vlan_strip(const struct pv_nic* nic, struct pv_packet* const pac
     if(info.is_exists) {
         packet->vlan = info;
         packet->ol_flags |= PV_PKT_RX_VLAN | PV_PKT_RX_VLAN_STRIPPED;
+    } else {
+        packet->vlan.is_exists = false;
     }
 }
 
@@ -28,6 +30,8 @@ void rx_offload_qinq_strip(const struct pv_nic* nic, struct pv_packet* const pac
     if(info.is_exists) {
         packet->qinq = info;
         packet->ol_flags |= PV_PKT_RX_QINQ | PV_PKT_RX_QINQ_STRIPPED;
+    } else {
+        packet->qinq.is_exists = false;
     }
 }
 
@@ -41,7 +45,7 @@ void vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet, uint16
         pkt_flag_vlan = PKT_RX_VLAN;
         break;
     case PV_ETH_TYPE_QINQ:
-        offload_type = DEV_RX_OFFLOAD_VLAN_STRIP;
+        offload_type = DEV_RX_OFFLOAD_QINQ_STRIP;
         pkt_flag_vlan = PKT_RX_QINQ;
         break;
     default:
@@ -51,7 +55,14 @@ void vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet, uint16
 
     info->is_exists = false;
 
-	if(pv_nic_is_rx_offload_supported(nic, offload_type)) {
+    // IMPORTANT: Even If vlan is supported, qinq was not supported and using qinq, Must be SW decoded.
+    bool must_fallback = (
+        ethtype == PV_ETH_TYPE_VLAN &&
+		packet->qinq.is_exists &&
+		pv_nic_is_not_usable(nic, DEV_RX_OFFLOAD_QINQ_STRIP)
+    );
+
+	if(pv_nic_is_rx_offload_supported(nic, offload_type) && !must_fallback) {
 		struct rte_mbuf* const mbuf = packet->mbuf;
 		if (mbuf->ol_flags & pkt_flag_vlan) {
             info->is_exists = true;
@@ -59,7 +70,7 @@ void vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet, uint16
 		}
 	} else {
 		struct pv_ethernet* ether = (struct pv_ethernet*) pv_packet_data_start(packet);
-		if (ether->type != PV_ETH_TYPE_VLAN) {
+		if (ether->type != ethtype) {
 			return;
 		}
 
@@ -137,11 +148,16 @@ void rx_offload_ipv4_checksum(const struct pv_nic* nic, struct pv_packet* const 
 }
 
 void tx_offload_vlan_insert(const struct pv_nic* nic, struct pv_packet* const packet) {
-    vlan_insert(nic, packet, PV_ETH_TYPE_VLAN, &packet->vlan);
+    if(packet->vlan.is_exists) {
+        vlan_insert(nic, packet, PV_ETH_TYPE_VLAN, &packet->vlan);
+    }
 }
 
 void tx_offload_qinq_insert(const struct pv_nic* nic, struct pv_packet* const packet) {
-    vlan_insert(nic, packet, PV_ETH_TYPE_QINQ, &packet->qinq);
+    if(packet->qinq.is_exists) {
+        puts("Insert qinq");
+        vlan_insert(nic, packet, PV_ETH_TYPE_QINQ, &packet->qinq);
+    }
 }
 
 void vlan_insert(const struct pv_nic* nic, struct pv_packet* const packet, uint16_t ethtype, struct pv_vlan_info* info) {

@@ -132,7 +132,7 @@ int pv_nic_add(uint16_t nic_id, char* dev_name, uint16_t nb_rx_queue, uint16_t n
 		printf("%s, Failed to configure dpdk dev\n", dev_name);
 		return ret;
 	}
-	
+
 	// rx queue setup
 	struct rte_eth_rxconf rxconf = dev_info.default_rxconf;
 	rxconf.offloads = port_conf.rxmode.offloads;
@@ -203,7 +203,7 @@ bool pv_nic_set_mac(uint16_t nic_id, uint64_t mac_addr) {
 bool pv_nic_get_ipv4(uint16_t nic_id, uint32_t* ipv4_addr) {
 	if(nic_id > nics_count)
 		return false;
-	
+
 	*ipv4_addr = nics[nic_id].ipv4_addr;
 	return true;
 }
