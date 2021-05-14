@@ -10,6 +10,9 @@ enum pv_pkt_rx_offload_type {
     PV_PKT_RX_IP_CKSUM_BAD = 1 << 3,
     PV_PKT_RX_IP_CKSUM_MASK = PV_PKT_RX_IP_CKSUM_GOOD | PV_PKT_RX_IP_CKSUM_BAD,
     PV_PKT_RX_IP_CKSUM_NONE = PV_PKT_RX_IP_CKSUM_MASK,
+
+    PV_PKT_RX_QINQ = 1 << 4,
+    PV_PKT_RX_QINQ_STRIPPED = 1 << 5,
 };
 
 #endif

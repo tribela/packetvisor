@@ -4,28 +4,58 @@
 #include <rte_ethdev.h>
 
 #include <pv/nic.h>
+#include <pv/packet.h>
 #include <pv/net/vlan.h>
 #include <pv/net/ipv4.h>
 #include <pv/checksum.h>
 #include <pv/offload.h>
 
+void vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet, uint16_t const ethtype, struct pv_vlan_info* info);
+void vlan_insert(const struct pv_nic* nic, struct pv_packet* const packet, uint16_t ethtype, struct pv_vlan_info* info);
 
 void rx_offload_vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet) {
-	
-	if(pv_nic_is_rx_offload_supported(nic, DEV_RX_OFFLOAD_VLAN_STRIP)) {
+    struct pv_vlan_info info;
+    vlan_strip(nic, packet, PV_ETH_TYPE_VLAN, &info);
+    if(info.is_exists) {
+        packet->vlan = info;
+        packet->ol_flags |= PV_PKT_RX_VLAN | PV_PKT_RX_VLAN_STRIPPED;
+    }
+}
+
+void rx_offload_qinq_strip(const struct pv_nic* nic, struct pv_packet* const packet) {
+    struct pv_vlan_info info;
+    vlan_strip(nic, packet, PV_ETH_TYPE_QINQ, &info);
+    if(info.is_exists) {
+        packet->qinq = info;
+        packet->ol_flags |= PV_PKT_RX_QINQ | PV_PKT_RX_QINQ_STRIPPED;
+    }
+}
+
+void vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet, uint16_t const ethtype, struct pv_vlan_info* info) {
+
+    uint32_t offload_type;
+    uint32_t pkt_flag_vlan;
+    switch(ethtype) {
+    case PV_ETH_TYPE_VLAN:
+        offload_type = DEV_RX_OFFLOAD_VLAN_STRIP;
+        pkt_flag_vlan = PKT_RX_VLAN;
+        break;
+    case PV_ETH_TYPE_QINQ:
+        offload_type = DEV_RX_OFFLOAD_VLAN_STRIP;
+        pkt_flag_vlan = PKT_RX_QINQ;
+        break;
+    default:
+        // Do not enter here
+        assert(false);
+    }
+
+    info->is_exists = false;
+
+	if(pv_nic_is_rx_offload_supported(nic, offload_type)) {
 		struct rte_mbuf* const mbuf = packet->mbuf;
-		if (mbuf->ol_flags & PKT_RX_VLAN) {
-			packet->ol_flags |= PV_PKT_RX_VLAN;
-			packet->vlan.is_exists = true;
-
-			packet->vlan.tci = pv_vlan_uint16_to_tci(mbuf->vlan_tci);
-
-			if (mbuf->ol_flags & PKT_RX_VLAN_STRIPPED)
-			{
-				packet->ol_flags |= PV_PKT_RX_VLAN_STRIPPED;
-			}
-		} else {
-			packet->vlan.is_exists = false;
+		if (mbuf->ol_flags & pkt_flag_vlan) {
+            info->is_exists = true;
+			info->tci = pv_vlan_uint16_to_tci(mbuf->vlan_tci);
 		}
 	} else {
 		struct pv_ethernet* ether = (struct pv_ethernet*) pv_packet_data_start(packet);
@@ -33,12 +63,10 @@ void rx_offload_vlan_strip(const struct pv_nic* nic, struct pv_packet* const pac
 			return;
 		}
 
-		packet->ol_flags |= PV_PKT_RX_VLAN | PV_PKT_RX_VLAN_STRIPPED;
-
 		struct pv_vlan* vlan = (struct pv_vlan*)PV_ETH_PAYLOAD(ether);
 
-		packet->vlan.is_exists = true;
-		packet->vlan.tci = vlan->tci;
+        info->is_exists = true;
+        info->tci = vlan->tci;
 
 		// MAGIC: PV_ETHER_HDR_LEN - sizeof(ether->type) -- vlan->etype becomes ether->type
 		memmove(pv_packet_data_start(packet) + PV_VLAN_HDR_LEN, pv_packet_data_start(packet), PV_ETH_HDR_LEN - sizeof(ether->type));
@@ -68,11 +96,11 @@ bool rx_offload_vlan_filter(const struct pv_nic* nic, struct pv_packet* const pa
 void rx_offload_ipv4_checksum(const struct pv_nic* nic, struct pv_packet* const packet) {
 	struct pv_ethernet * const ether = (struct pv_ethernet *)pv_packet_data_start(packet);
 	struct rte_mbuf* const mbuf = packet->mbuf;
-	
+
 	if (ether->type != PV_ETH_TYPE_IPv4) {
 		return;
 	}
-	
+
 	if (pv_nic_is_rx_offload_supported(nic, DEV_RX_OFFLOAD_IPV4_CKSUM)) {
 		uint32_t mask = mbuf->ol_flags & PKT_RX_IP_CKSUM_MASK;
 
@@ -102,28 +130,52 @@ void rx_offload_ipv4_checksum(const struct pv_nic* nic, struct pv_packet* const 
 		} else {
 			packet->ol_flags |= PV_PKT_RX_IP_CKSUM_BAD;
 		}
-		
+
 		// Restore original checksum
 		ipv4->checksum = pkt_checksum;
 	}
 }
 
 void tx_offload_vlan_insert(const struct pv_nic* nic, struct pv_packet* const packet) {
+    vlan_insert(nic, packet, PV_ETH_TYPE_VLAN, &packet->vlan);
+}
+
+void tx_offload_qinq_insert(const struct pv_nic* nic, struct pv_packet* const packet) {
+    vlan_insert(nic, packet, PV_ETH_TYPE_QINQ, &packet->qinq);
+}
+
+void vlan_insert(const struct pv_nic* nic, struct pv_packet* const packet, uint16_t ethtype, struct pv_vlan_info* info) {
+
+    uint64_t tx_flag;
+    uint16_t* mbuf_tci;
+    switch(ethtype) {
+    case PV_ETH_TYPE_VLAN:
+        tx_flag = PKT_TX_VLAN;
+        mbuf_tci = &packet->mbuf->vlan_tci;
+        break;
+    case PV_ETH_TYPE_QINQ:
+        tx_flag = PKT_TX_QINQ;
+        mbuf_tci = &packet->mbuf->vlan_tci_outer;
+        break;
+    default:
+        // Do not enter here
+        assert(false);
+    }
 
 	if(pv_nic_is_tx_offload_supported(nic, DEV_TX_OFFLOAD_VLAN_INSERT)) {
 		struct rte_mbuf *const mbuf = packet->mbuf;
-		mbuf->ol_flags |= PKT_TX_VLAN;
-		mbuf->vlan_tci = pv_vlan_tci_to_uint16(packet->vlan.tci);
+		mbuf->ol_flags |= tx_flag;
+		*mbuf_tci = pv_vlan_tci_to_uint16(info->tci);
 	} else {
 		void* start = pv_packet_data_start(packet);
 		struct pv_ethernet* ether = (struct pv_ethernet*) start;
 		memmove(start - PV_VLAN_HDR_LEN, start, PV_ETH_HDR_LEN - sizeof(ether->type));
 		packet->start -= PV_VLAN_HDR_LEN;
-		
+
 		// Move to new header pos
 		ether = (struct pv_ethernet*)pv_packet_data_start(packet);
-		
-		ether->type = PV_ETH_TYPE_VLAN;
+
+		ether->type = ethtype;
 		void* tci_pos = PV_ETH_PAYLOAD(ether);
 		memcpy(tci_pos, &packet->vlan.tci, sizeof(packet->vlan.tci));
 	}

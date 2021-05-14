@@ -12,6 +12,7 @@ enum pv_ethernet_type {
     PV_ETH_TYPE_ARP  = 0x0806,
     PV_ETH_TYPE_IPv6 = 0x86DD,
     PV_ETH_TYPE_VLAN = 0x8100,
+    PV_ETH_TYPE_QINQ = 0x88A8,
 };
 
 struct pv_ethernet {

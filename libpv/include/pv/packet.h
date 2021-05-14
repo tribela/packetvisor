@@ -5,6 +5,11 @@
 #include <stdbool.h>
 #include <pv/net/vlan.h>
 
+struct pv_vlan_info {
+    bool is_exists;
+    struct pv_vlan_tci tci;
+};
+
 struct pv_packet {
     uint8_t* buffer;  // Usable space starting address
     uint32_t buffer_len;  // Total length of usable space
@@ -13,10 +18,8 @@ struct pv_packet {
 
     uint16_t nic_id;
     uint32_t ol_flags;
-    struct {
-        bool is_exists;
-        struct pv_vlan_tci tci;
-    } vlan;
+    struct pv_vlan_info vlan;
+    struct pv_vlan_info qinq;
     struct rte_mbuf* mbuf;
 };
 
