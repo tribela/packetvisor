@@ -59,7 +59,7 @@ void vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet, uint16
     bool must_fallback = (
         ethtype == PV_ETH_TYPE_VLAN &&
 		packet->qinq.is_exists &&
-		pv_nic_is_not_usable(nic, DEV_RX_OFFLOAD_QINQ_STRIP)
+		pv_nic_is_rx_not_usable(nic, DEV_RX_OFFLOAD_QINQ_STRIP)
     );
 
 	if(pv_nic_is_rx_offload_supported(nic, offload_type) && !must_fallback) {
@@ -164,25 +164,36 @@ void vlan_insert(const struct pv_nic* nic, struct pv_packet* const packet, uint1
 
     uint64_t tx_flag;
     uint16_t* mbuf_tci;
+	uint32_t offload_type;
     switch(ethtype) {
     case PV_ETH_TYPE_VLAN:
         tx_flag = PKT_TX_VLAN;
         mbuf_tci = &packet->mbuf->vlan_tci;
+		offload_type = DEV_TX_OFFLOAD_VLAN_INSERT;
         break;
     case PV_ETH_TYPE_QINQ:
         tx_flag = PKT_TX_QINQ;
         mbuf_tci = &packet->mbuf->vlan_tci_outer;
+		offload_type = DEV_TX_OFFLOAD_QINQ_INSERT;
         break;
     default:
         // Do not enter here
         assert(false);
     }
 
-	if(pv_nic_is_tx_offload_supported(nic, DEV_TX_OFFLOAD_VLAN_INSERT)) {
+    // IMPORTANT: Even If vlan is supported, qinq was not supported and using qinq, Must be SW decoded.
+    bool must_fallback = (
+        ethtype == PV_ETH_TYPE_VLAN &&
+		packet->qinq.is_exists &&
+		pv_nic_is_tx_not_usable(nic, DEV_TX_OFFLOAD_QINQ_INSERT)
+    );
+
+	if(pv_nic_is_tx_offload_supported(nic, offload_type) && !must_fallback) {
 		struct rte_mbuf *const mbuf = packet->mbuf;
 		mbuf->ol_flags |= tx_flag;
 		*mbuf_tci = pv_vlan_tci_to_uint16(info->tci);
 	} else {
+
 		void* start = pv_packet_data_start(packet);
 		struct pv_ethernet* ether = (struct pv_ethernet*) start;
 		memmove(start - PV_VLAN_HDR_LEN, start, PV_ETH_HDR_LEN - sizeof(ether->type));
