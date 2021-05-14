@@ -17,7 +17,8 @@ int process(void* ctx) {
             break;
         }
 
-        if(pv_packet_add_tail_paylen(packet, sizeof(struct pv_ethernet) + sizeof(struct pv_arp)) == false) {
+        size_t size = sizeof(struct pv_ethernet) + sizeof(struct pv_arp);
+        if(packet->end + packet->buffer_len < size) {
             printf("Failed to add paylen\n");
             pv_packet_free(packet);
             break;
