@@ -13,9 +13,9 @@ struct pv_set {
 };
 
 struct pv_set* pv_set_create(size_t elem_size, size_t init_space);
-void pv_set_destroy(struct pv_set* const list);
-bool pv_set_add(struct pv_set* const list, const void* datum);
-bool pv_set_remove(struct pv_set* const list, const void* datum);
+void pv_set_destroy(struct pv_set* list);
+bool pv_set_add(struct pv_set* list, const void* datum);
+bool pv_set_remove(struct pv_set* list, const void* datum);
 bool pv_set_contains(const struct pv_set* list, const void* datum);
 
 #endif

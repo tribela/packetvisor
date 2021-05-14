@@ -4,7 +4,7 @@
 #include <pv/net/ethernet.h>
 #include <pv/nic.h>
 
-void rx_offload_vlan_strip(const struct pv_nic* nic, struct pv_packet* const packet);
+void rx_offload_vlan_strip(const struct pv_nic* nic, struct pv_packet* packet);
 
 /**
  * Filter based on VLAN id
@@ -13,10 +13,10 @@ void rx_offload_vlan_strip(const struct pv_nic* nic, struct pv_packet* const pac
  *
  * @return false if this packet need to be filtered out. else true
  */
-bool rx_offload_vlan_filter(const struct pv_nic* nic, struct pv_packet* const packet);
-void rx_offload_ipv4_checksum(const struct pv_nic* nic, struct pv_packet* const packet);
+bool rx_offload_vlan_filter(const struct pv_nic* nic, struct pv_packet* packet);
+void rx_offload_ipv4_checksum(const struct pv_nic* nic, struct pv_packet* packet);
 
-void tx_offload_vlan_insert(const struct pv_nic* nic, struct pv_packet* const packet);
-void tx_offload_ipv4_checksum(const struct pv_nic* nic, struct pv_packet* const packet);
+void tx_offload_vlan_insert(const struct pv_nic* nic, struct pv_packet* packet);
+void tx_offload_ipv4_checksum(const struct pv_nic* nic, struct pv_packet* packet);
 
 #endif
