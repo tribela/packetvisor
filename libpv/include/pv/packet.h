@@ -23,17 +23,11 @@ struct pv_packet {
     struct rte_mbuf* mbuf;
 };
 
-inline uint8_t* pv_packet_data_start(const struct pv_packet* packet) {
-    return packet->buffer + packet->start;
-}
+uint8_t* pv_packet_data_start(const struct pv_packet* packet);
 
-inline uint8_t* pv_packet_data_end(const struct pv_packet* packet) {
-    return packet->buffer + packet->end;
-}
+uint8_t* pv_packet_data_end(const struct pv_packet* packet);
 
-inline uint32_t pv_packet_data_len(const struct pv_packet* packet) {
-    return packet->end - packet->start;
-}
+uint32_t pv_packet_data_len(const struct pv_packet* packet);
 
 /**
  * Allocate a new packet.

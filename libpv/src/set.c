@@ -8,11 +8,11 @@
 
 bool resize(struct pv_set* set);
 
-inline void* current_address(const struct pv_set* const set) {
+void* current_address(const struct pv_set* const set) {
     return set->array + (set->elem_size * set->current);
 }
 
-inline void* pos_address(const struct pv_set* const set, size_t pos) {
+void* pos_address(const struct pv_set* const set, size_t pos) {
     return set->array + (set->elem_size * pos);
 }
 
@@ -26,7 +26,7 @@ struct pv_set* pv_set_create(size_t elem_size, size_t init_space) {
     set->max_size = init_space;
     set->current = 0;
     set->elem_size = elem_size;
-    
+
     return set;
 }
 
@@ -50,7 +50,7 @@ bool pv_set_add(struct pv_set* const set, const void* datum) {
             return false;
         }
     }
-    
+
     memcpy(current_address(set), datum, set->elem_size);
     set->current += 1;
     return true;
@@ -58,19 +58,19 @@ bool pv_set_add(struct pv_set* const set, const void* datum) {
 
 bool pv_set_contains(const struct pv_set* set, const void* datum) {
     assert(set != NULL);
-    
+
     for(size_t i = 0; i < set->current; i += 1) {
         if(memcmp(current_address(set), datum, set->elem_size) == 0) {
             return true;
         }
     }
-    
+
     return false;
 }
 
 bool pv_set_remove(struct pv_set* const set, const void* datum) {
     assert(set != NULL);
-    
+
     for(size_t i = 0; i < set->current; i += 1) {
         if(memcmp(pos_address(set, i), datum, set->elem_size) == 0) {
             // Found. copy last to here and remove last
@@ -79,7 +79,7 @@ bool pv_set_remove(struct pv_set* const set, const void* datum) {
             return true;
         }
     }
-    
+
     return false;
 }
 
@@ -90,7 +90,7 @@ bool resize(struct pv_set* set) {
     if (new_array == NULL) {
         return false;
     }
-    
+
     set->array = new_array;
     set->max_size = new_size;
     return true;

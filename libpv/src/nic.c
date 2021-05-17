@@ -349,3 +349,27 @@ bool pv_nic_vlan_filter_off(uint16_t nic_id, uint16_t id) {
 	int res = rte_eth_dev_vlan_filter(nics[nic_id].dpdk_port_id, id, 0);
 	return res == 0;
 }
+
+bool pv_nic_is_tx_offload_enabled(const struct pv_nic* nic, uint32_t feature) {
+    return nic->tx_offload_mask & feature;
+}
+
+bool pv_nic_is_tx_offload_supported(const struct pv_nic* nic, uint32_t feature) {
+    return nic->tx_offload_capa & feature;
+}
+
+bool pv_nic_is_rx_offload_enabled(const struct pv_nic* nic, uint32_t feature) {
+    return nic->rx_offload_mask & feature;
+}
+
+bool pv_nic_is_rx_offload_supported(const struct pv_nic* nic, uint32_t feature) {
+    return nic->rx_offload_capa & feature;
+}
+
+bool pv_nic_is_rx_not_usable(const struct pv_nic* nic, uint32_t feature) {
+    return pv_nic_is_rx_offload_enabled(nic, feature) && !pv_nic_is_rx_offload_supported(nic, feature);
+}
+
+bool pv_nic_is_tx_not_usable(const struct pv_nic* nic, uint32_t feature) {
+    return pv_nic_is_tx_offload_enabled(nic, feature) && !pv_nic_is_tx_offload_supported(nic, feature);
+}

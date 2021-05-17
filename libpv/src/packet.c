@@ -27,3 +27,16 @@ struct pv_packet* pv_packet_alloc() {
 void pv_packet_free(struct pv_packet* packet) {
 	rte_pktmbuf_free(packet->mbuf);
 }
+
+uint8_t* pv_packet_data_start(const struct pv_packet* packet)
+{
+    return packet->buffer + packet->start;
+}
+
+uint8_t* pv_packet_data_end(const struct pv_packet* packet) {
+    return packet->buffer + packet->end;
+}
+
+uint32_t pv_packet_data_len(const struct pv_packet* packet) {
+    return packet->end - packet->start;
+}
