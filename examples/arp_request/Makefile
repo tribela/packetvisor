@@ -1,16 +1,16 @@
 .PHONY: shared clean
 
 APP = arp_request
-RELEASE ?= 1
+DEBUG ?= 1
 
 ifeq ($(PV_HOME),)
 PV_HOME = $(word 1, $(subst /examples, , $(realpath $(lastword $(MAKEFILE_LIST)))))
 endif
 
-ifeq ($(RELEASE), 1)
-	CFLAGS=-Wl,-rpath=$(PV_HOME)/libpv -O3
-else
+ifeq ($(DEBUG), 1)
 	CFLAGS=-Wl,-rpath=$(PV_HOME)/libpv -O0 -g -fsanitize=address
+else
+	CFLAGS=-Wl,-rpath=$(PV_HOME)/libpv -O3
 endif
 
 SRCS := main.c
