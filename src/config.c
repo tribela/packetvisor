@@ -5,7 +5,6 @@
 
 #include <assert.h>
 
-// #include <cl/collection.h>
 #include <cl/map.h>
 
 #include "zf_log.h"
